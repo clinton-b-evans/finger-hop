@@ -55,7 +55,9 @@ button {
   gap: 4vh;
 }
 .start-fox {
+  display: block;
   width: min(60vw, 45vh);
+  aspect-ratio: 3 / 4;
   animation: bob 1.6s ease-in-out infinite;
   filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .15));
 }
@@ -68,8 +70,9 @@ button {
   paint-order: stroke fill;
 }
 .tap-hint .finger { display: inline-block; animation: tap-finger 1s ease-in-out infinite; -webkit-text-stroke: 0; }
-.icon-btn.corner { position: absolute; top: calc(10px + var(--safe-t)); right: 12px; }
+.corner { position: absolute; top: calc(10px + var(--safe-t)); right: 12px; display: flex; gap: 10px; }
 .mute-btn.muted { background: #ffe1d6; }
+.music-btn.muted { opacity: .45; }
 @keyframes tap-finger { 50% { transform: translateY(-20%); } }
 
 .big-round {
@@ -105,7 +108,7 @@ button {
   padding: 12px 12px calc(24px + var(--safe-b));
 }
 .levels-top { width: min(94vw, 900px); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.levels-top .levels-total { flex: 1; text-align: right; }
+.levels-top .levels-total { flex: 1; text-align: right; white-space: nowrap; font-size: clamp(18px, 5.5vw, 28px); }
 .levels-total { font-size: 28px; font-weight: 900; color: var(--ink); }
 .world { width: min(94vw, 900px); margin-top: 14px; }
 .world-head {
@@ -164,6 +167,80 @@ button {
 .level-btn.locked .lv-num { color: #b8ad9b; }
 .level-btn .lock { position: absolute; font-size: clamp(22px, 7vw, 40px); }
 
+/* dress-up entry on the level screen: your character in a bubble */
+.dressup-btn {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 5px 0 #d9c7a8;
+  padding: 0;
+  flex: none;
+}
+.dressup-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #d9c7a8; }
+.dressup-btn canvas { width: 100%; height: 100%; display: block; }
+.dressup-btn .badge { position: absolute; right: -6px; bottom: -6px; font-size: 26px; }
+
+/* ---------- wardrobe ---------- */
+#screen-wardrobe {
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 12px calc(16px + var(--safe-b));
+  overflow-y: auto;
+}
+.wardrobe {
+  flex: 1;
+  width: min(94vw, 900px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.wardrobe-preview {
+  width: min(52vw, 27vh);
+  aspect-ratio: 3 / 4;
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 70%, #fff8ec, rgba(255, 248, 236, 0) 70%);
+  flex: none;
+}
+.wardrobe-pick { width: 100%; display: flex; flex-direction: column; gap: 12px; padding: 0 6px 8px; }
+.char-row { display: flex; justify-content: center; gap: 12px; }
+.char-btn, .outfit-btn {
+  position: relative;
+  border-radius: 22px;
+  background: var(--cream);
+  box-shadow: 0 6px 0 #d9c7a8;
+  padding: 4px;
+}
+.char-btn { width: min(22vw, 12vh, 110px); aspect-ratio: 3 / 4; }
+.char-btn canvas { width: 100%; height: 100%; display: block; }
+.char-btn.on, .outfit-btn.on { outline: 5px solid var(--orange); background: #fff3d6; }
+.char-btn:active, .outfit-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #d9c7a8; }
+.outfit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.outfit-btn { aspect-ratio: 1; display: grid; place-items: center; }
+.outfit-btn img { width: 78%; height: 78%; object-fit: contain; pointer-events: none; }
+.outfit-btn.locked { background: #e8e2d6; box-shadow: 0 6px 0 #c9bfae; }
+.outfit-btn.locked img { filter: grayscale(1) brightness(1.1); opacity: .35; }
+.outfit-btn .req {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: clamp(12px, 3.4vw, 18px);
+  font-weight: 900;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0 8px;
+}
+@media (orientation: landscape) {
+  .wardrobe { flex-direction: row; align-items: flex-start; justify-content: center; }
+  .wardrobe-preview { width: min(28vw, 52vh); }
+  .wardrobe-pick { width: auto; flex: 1; max-width: min(560px, 105vh); }
+  .char-btn { width: min(12vw, 20vh, 96px); }
+}
+
 /* ---------- game ---------- */
 #screen-game {
   flex-direction: column;
@@ -189,16 +266,20 @@ button {
 .icon-btn:active { transform: translateY(3px); box-shadow: none; }
 @media (max-width: 380px) {
   .topbar .icon-btn { width: 48px; height: 48px; font-size: 24px; }
-  .topbar .berries { font-size: 24px; letter-spacing: 1px; }
+  .collect-bar img { height: 26px; }
 }
-.berries {
+/* things to collect in this level */
+.collect-bar {
   flex: 1;
-  text-align: center;
-  font-size: 32px;
-  letter-spacing: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
 }
-.berries .got { animation: pop .5s ease-out; display: inline-block; }
-.berries .miss { opacity: .25; filter: grayscale(1); }
+.collect-bar img { height: 34px; width: auto; }
+.collect-bar .got { animation: pop .5s ease-out; }
+.collect-bar .miss { opacity: .3; filter: grayscale(1); }
 
 .stage {
   position: relative;
@@ -422,8 +503,20 @@ button {
   background: radial-gradient(circle, rgba(255, 250, 220, .92), rgba(255, 210, 120, .85));
   animation: fadein .4s ease-out;
 }
-.win-fox { width: min(55vw, 38vh); animation: cheer .7s ease-in-out infinite alternate; }
-.win-berries { font-size: min(9vw, 5vh); letter-spacing: 6px; }
+.win-fox { display: block; width: min(55vw, 34vh); aspect-ratio: 3 / 4; animation: cheer .7s ease-in-out infinite alternate; }
+/* newly unlocked outfit(s) */
+.win-unlock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 6px 0 #e5c98d;
+  animation: star-in .6s 1.4s cubic-bezier(.2, 1.8, .4, 1) backwards;
+}
+.win-unlock::before { content: '🎁'; font-size: min(10vw, 6vh); }
+.win-unlock img { height: min(14vw, 8vh); width: auto; }
 .win-stars { display: flex; gap: 3vw; font-size: min(18vw, 10vh); line-height: 1; }
 .win-stars span { opacity: 0; transform: scale(0); }
 .win-stars span.on { animation: star-in .5s cubic-bezier(.2, 1.8, .4, 1) forwards; }

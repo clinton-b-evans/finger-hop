@@ -14,6 +14,12 @@ export async function loadLevels() {
   return data;
 }
 
+// Item kinds a level can place on its path (levels.json "items").
+const COLLECTIBLES = new Set(['strawberry', 'gem', 'heart']); // count toward the "got everything" star
+const BLOCKERS = new Set(['rock']); // landing on one bumps you back to where the move started
+export const isCollectible = (type) => COLLECTIBLES.has(type);
+export const isBlocker = (type) => BLOCKERS.has(type);
+
 /** Tile code at (row, col), or null when empty / out of range. */
 export function tileAt(level, row, col) {
   const line = level.tiles[row];

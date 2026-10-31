@@ -1,7 +1,8 @@
-// Isometric canvas renderer: tiles, decor, items, the fox and particles.
+// Isometric canvas renderer: tiles, decor, items, the hero and particles.
 // World coords are (row, col) floats; (col - row) goes right, (col + row) goes down.
 
-import { tileAt } from './levels.js';
+import { tileAt, isBlocker } from './levels.js';
+import { drawCharacter, characterImageNames } from './characters.js';
 
 // Measured from the PNGs: opaque width, horizontal centre, and the y of the
 // top-face centre (where an object standing on the tile should put its feet).
@@ -16,25 +17,34 @@ const TILE_META = {
 const ISO_Y = 0.29; // vertical step per (row + col), as a fraction of tile width
 
 // Sprite heights relative to tile width.
+const HERO_HEIGHT = 1.05; // a full-size (352 px) character sprite
 const SIZE = {
-  fox: 1.05,
   strawberry: 0.5,
+  gem: 0.45,
+  heart: 0.42,
   star: 0.55,
+  star_alt: 0.55,
   chest: 0.6,
+  rock: 0.5,
   tree: 1.05,
   bush: 0.6,
   flowers: 0.55,
+  mushroom: 0.48,
+  flower_tulip: 0.55,
 };
 
-export const SPRITES = [
-  'fox_idle', 'fox_crouch', 'fox_jump', 'fox_land', 'fox_cheer', 'fox_wave',
+/** Tiles, items and scenery (character + outfit images come from characters.json). */
+export const WORLD_SPRITES = [
   'tile_grass', 'tile_sand', 'tile_water', 'tile_stone', 'tile_number', 'tile_bridge',
-  'strawberry', 'star', 'chest', 'bush', 'tree', 'flowers',
+  'strawberry', 'gem', 'heart', 'star', 'star_alt', 'chest',
+  'rock', 'bush', 'tree', 'flowers', 'mushroom', 'flower_tulip',
 ];
 
+/** Load assets/<name>.png for every world sprite and character/outfit image. */
 export function loadImages() {
+  const names = [...new Set([...WORLD_SPRITES, ...characterImageNames()])];
   return Promise.all(
-    SPRITES.map(
+    names.map(
       (name) =>
         new Promise((resolve, reject) => {
           const img = new Image();
@@ -54,7 +64,8 @@ export class Scene {
     this.level = null;
     this.tileKey = {};
     this.particles = [];
-    this.fox = { r: 0, c: 0, z: 0, sprite: 'fox_idle', squash: 1, flip: false, scale: 1 };
+    this.hero = { r: 0, c: 0, z: 0, pose: 'idle', squash: 1, flip: false, scale: 1 };
+    this.look = { character: 'fox', outfits: {} };
     this.items = [];
     this.goal = null;
     this.badges = []; // [{r, c, n}] numbered hints on the tiles ahead
@@ -72,12 +83,12 @@ export class Scene {
     this.tileKey = tileKey;
     this.items = level.items.map((it) => {
       const [r, c] = level.path[it.index];
-      return { type: it.type, index: it.index, r, c, taken: false, takenT: 0 };
+      return { type: it.type, index: it.index, r, c, taken: false, takenT: 0, blocker: isBlocker(it.type) };
     });
     const [gr, gc] = level.path[level.goal.index];
     this.goal = { type: level.goal.item || 'star', r: gr, c: gc };
     const [r0, c0] = level.path[0];
-    Object.assign(this.fox, { r: r0, c: c0, z: 0, sprite: 'fox_wave', squash: 1, scale: 1 });
+    Object.assign(this.hero, { r: r0, c: c0, z: 0, pose: 'wave', squash: 1, scale: 1, flip: false });
     this.particles = [];
     this.badges = [];
     this.resize();
@@ -106,7 +117,7 @@ export class Scene {
       const y = (c + r) * ISO_Y;
       minX = Math.min(minX, x - 0.5);
       maxX = Math.max(maxX, x + 0.5);
-      minY = Math.min(minY, y - 1.15); // room for the fox / trees above
+      minY = Math.min(minY, y - 1.15); // room for the hero / trees above
       maxY = Math.max(maxY, y + 0.55); // tile body below the top face
     };
     lv.tiles.forEach((line, r) => [...line].forEach((_, c) => tileAt(lv, r, c) && add(r, c)));
@@ -205,13 +216,13 @@ export class Scene {
     for (const d of lv.decor) things.push({ kind: 'decor', type: d.type, r: d.row, c: d.col });
     for (const it of this.items) if (!it.taken || t - it.takenT < 0.6) things.push({ kind: 'item', it, r: it.r, c: it.c });
     if (this.goal) things.push({ kind: 'goal', r: this.goal.r, c: this.goal.c });
-    things.push({ kind: 'fox', r: this.fox.r, c: this.fox.c, d: 1000 }); // always on top so scenery never hides it
+    things.push({ kind: 'hero', r: this.hero.r, c: this.hero.c, d: 1000 }); // always on top so scenery never hides it
     things.sort((a, b) => a.r + a.c + (a.d || 0) - (b.r + b.c + (b.d || 0)));
     for (const th of things) {
       if (th.kind === 'decor') this.drawSprite(th.type, th.r, th.c, SIZE[th.type] || 0.7, { sway: t });
       else if (th.kind === 'item') this.drawItem(th.it, t);
       else if (th.kind === 'goal') this.drawGoal(t);
-      else this.drawFox(t);
+      else this.drawHero(t);
     }
 
     this.drawParticles(dt);
@@ -288,6 +299,12 @@ export class Scene {
 
   drawItem(it, t) {
     const { tileW } = this.fit;
+    if (it.blocker) {
+      // Obstacles sit still; landing on one bumps you back.
+      this.drawShadow(it.r, it.c, 0.9, 0.18);
+      this.drawSprite(it.type, it.r, it.c, SIZE[it.type] ?? 0.5, { lift: -tileW * 0.02 });
+      return;
+    }
     if (it.taken) {
       const a = (t - it.takenT) / 0.6;
       this.drawSprite(it.type, it.r, it.c, SIZE[it.type] * (1 + a * 0.6), {
@@ -313,23 +330,24 @@ export class Scene {
     ctx.fillStyle = grd;
     ctx.fillRect(p.x - tileW, p.y - tileW, tileW * 2, tileW * 1.4);
     this.drawShadow(g.r, g.c, 0.9);
-    const bob = g.type === 'star' ? (Math.sin(t * 2.5) * 0.5 + 0.5) * tileW * 0.1 : 0;
+    const floaty = g.type !== 'chest';
+    const bob = floaty ? (Math.sin(t * 2.5) * 0.5 + 0.5) * tileW * 0.1 : 0;
     this.drawSprite(g.type, g.r, g.c, SIZE[g.type] || 0.6, {
       lift: tileW * 0.05 + bob,
-      rot: g.type === 'star' ? Math.sin(t * 2) * 0.12 : 0,
+      rot: floaty ? Math.sin(t * 2) * 0.12 : 0,
     });
   }
 
-  drawFox(t) {
-    const f = this.fox;
+  drawHero(t) {
+    const h = this.hero;
     const { tileW } = this.fit;
-    const breathe = f.sprite === 'fox_idle' ? 1 + Math.sin(t * 3) * 0.02 : 1;
-    this.drawShadow(f.r, f.c, Math.max(0.4, 1 - f.z / (tileW * 1.2)));
-    this.drawSprite(f.sprite, f.r, f.c, SIZE.fox * f.scale, {
-      lift: f.z,
-      scaleX: (1 / f.squash) * (2 - breathe),
-      scaleY: f.squash * breathe,
-      flip: f.flip,
+    const breathe = h.pose === 'idle' ? 1 + Math.sin(t * 3) * 0.02 : 1;
+    this.drawShadow(h.r, h.c, Math.max(0.4, 1 - h.z / (tileW * 1.2)));
+    const p = this.toScreen(h.r, h.c);
+    drawCharacter(this.ctx, this.img, this.look, h.pose, p.x, p.y + tileW * 0.04 - h.z, tileW * HERO_HEIGHT * h.scale, {
+      flip: h.flip,
+      scaleX: (1 / h.squash) * (2 - breathe),
+      scaleY: h.squash * breathe,
     });
   }
 

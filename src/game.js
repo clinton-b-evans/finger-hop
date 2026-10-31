@@ -1,7 +1,7 @@
-// Game rules + fox animation sequencing.
+// Game rules + hero animation sequencing for one level.
 
-import { tileAt } from './levels.js';
-import { sfx, say, numberWord } from './audio.js';
+import { tileAt, isCollectible } from './levels.js';
+import { sfx, voice, say } from './audio.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -19,43 +19,57 @@ function tween(ms, fn) {
 }
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
-const PRAISE = ['Yay!', 'Good hopping!', 'Nice!', 'Well done!'];
+const COLLECT_LINES = { strawberry: 'Yum! A strawberry!', gem: 'A shiny gem!', heart: 'A heart! I love it!' };
+const GOAL_NAMES = { chest: 'treasure', star: 'star', star_alt: 'star' };
 
+/**
+ * UI callbacks the game needs:
+ *  showNumber(n|null, kind)       big animated number ('show' | 'count' | 'splash')
+ *  setCollectibles(items, popType) collectible icons in the top bar
+ *  setReady(bool)                 a turn may start (true) / the hero is busy (false)
+ *  win(got, total, stars)         level finished
+ */
 export class Game {
-  /**
-   * @param {import('./render.js').Scene} scene
-   * @param {object} ui callbacks: showNumber(n, kind), setBerries(got, total, pop), setReady(bool), win(got, total)
-   */
   constructor(scene, ui) {
     this.scene = scene;
     this.ui = ui;
     this.level = null;
     this.index = 0;
+    this.misses = 0;
     this.busy = true;
     this.token = 0; // bumps on level change so stale animations stop
   }
 
-  get berriesTotal() {
-    return this.level.items.filter((i) => i.type === 'strawberry').length;
+  get hero() {
+    return this.scene.hero;
   }
-  get berriesGot() {
-    return this.scene.items.filter((i) => i.type === 'strawberry' && i.taken).length;
+  get collectibles() {
+    return this.scene.items.filter((i) => isCollectible(i.type));
+  }
+  get gotAll() {
+    return this.collectibles.every((i) => i.taken);
+  }
+  /** 1 for the goal, +1 for every collectible, +1 for no splashes / bumps / "too many". */
+  get stars() {
+    return 1 + (this.gotAll ? 1 : 0) + (this.misses === 0 ? 1 : 0);
   }
 
   async start(level, tileKey) {
     const token = ++this.token;
     this.level = level;
     this.index = 0;
-    this.misses = 0; // splashes + "too many" tries, for the star rating
-    this.turns = 0;
+    this.misses = 0;
     this.scene.setLevel(level, tileKey);
-    this.ui.setBerries(0, this.berriesTotal);
+    this.ui.setCollectibles(this.collectibles);
     this.setBusy(true);
-    this.scene.fox.sprite = 'fox_wave';
-    say(level.hint || 'Show me fingers!');
-    await sleep(1600);
+    this.hero.pose = 'wave';
+    voice.hopHop();
+    await sleep(900);
     if (token !== this.token) return;
-    this.scene.fox.sprite = 'fox_idle';
+    say(level.hint || 'Show me fingers!', { interrupt: false });
+    await sleep(800);
+    if (token !== this.token) return;
+    this.hero.pose = 'idle';
     this.setBusy(false);
   }
 
@@ -84,158 +98,146 @@ export class Game {
     say(this.level?.hint || 'Show me fingers!');
   }
 
-  /** Stars for the finished level: 1 for the goal, +1 all strawberries, +1 no splashes / overshoots. */
-  get stars() {
-    return 1 + (this.berriesGot === this.berriesTotal ? 1 : 0) + (this.misses === 0 ? 1 : 0);
-  }
-
-  /** Main action: hop n tiles forward. */
+  /** Main action: the child chose n (fingers or a button). */
   async move(n) {
     if (this.busy || !this.level) return;
     const token = this.token;
     const lv = this.level;
     const start = this.index;
     const want = Math.max(1, Math.min(n, lv.maxHop));
-    this.turns++;
     this.setBusy(true);
 
-    // Puzzle levels: you must land exactly on the goal, so too many hops is a gentle "no".
+    // Say the number the moment it's locked in.
+    sfx.correct();
+    voice.number(want);
+    this.ui.showNumber(want, 'show');
+    await sleep(1000);
+    if (token !== this.token) return;
+
+    // Puzzle levels: you must land exactly on the goal, so too many is a gentle "no".
     if (lv.goal.exact && start + want > lv.goal.index) {
-      await this.tooMany(want, token);
+      await this.tooMany(token);
       return;
     }
+
     const steps = Math.min(want, lv.goal.index - start);
-
-    this.ui.showNumber(steps, 'show');
-    say(numberWord(steps) + '!');
-    await sleep(1000);
-
     for (let i = 1; i <= steps; i++) {
       if (token !== this.token) return;
       this.ui.showNumber(i, 'count');
-      say(numberWord(i), { rate: 1.05 });
+      voice.number(i);
       await this.hop(start + i - 1, start + i, i, i === steps);
     }
     if (token !== this.token) return;
     this.index = start + steps;
     const [r, c] = lv.path[this.index];
-    const code = tileAt(lv, r, c);
 
-    if (code === 'W') {
-      await this.splash(start, token);
-      return;
-    }
+    if (tileAt(lv, r, c) === 'W') return this.bounceBack(start, 'splash', token);
+    const here = this.scene.items.find((it) => it.index === this.index && !it.taken);
+    if (here?.blocker) return this.bounceBack(start, 'bump', token);
 
-    const item = this.scene.items.find((it) => it.index === this.index && !it.taken);
-    if (item) {
-      item.taken = true;
-      item.takenT = performance.now() / 1000;
+    if (here && isCollectible(here.type)) {
+      here.taken = true;
+      here.takenT = performance.now() / 1000;
       this.scene.burst(r, c, 'sparkle');
-      sfx.collect();
-      this.ui.setBerries(this.berriesGot, this.berriesTotal, true);
+      sfx.collect(here.type);
+      this.ui.setCollectibles(this.collectibles, here.type);
     }
 
-    if (this.index === lv.goal.index) {
-      await this.celebrate(token);
-      return;
-    }
+    if (this.index === lv.goal.index) return this.celebrate(token);
 
-    if (item) say('Yum! A strawberry!');
-    else if (Math.random() < 0.5) say(PRAISE[(Math.random() * PRAISE.length) | 0]);
+    if (here) say(COLLECT_LINES[here.type] ?? 'Yay!');
+    else if (Math.random() < 0.4) voice.greatJob();
     await sleep(350);
     if (token !== this.token) return;
+    this.endMove();
+  }
+
+  endMove() {
     this.ui.showNumber(null);
-    this.scene.fox.sprite = 'fox_idle';
+    this.hero.pose = 'idle';
     this.setBusy(false);
   }
 
   async hop(fromIdx, toIdx, step, last, { height = 0.55, ms = 380 } = {}) {
-    const fox = this.scene.fox;
+    const hero = this.hero;
     const [r0, c0] = this.level.path[fromIdx];
     const [r1, c1] = this.level.path[toIdx];
     const tileW = this.scene.fit.tileW;
     const dx = c1 - r1 - (c0 - r0);
-    if (dx !== 0) fox.flip = dx < 0;
+    if (dx !== 0) hero.flip = dx < 0;
 
-    fox.sprite = 'fox_crouch';
-    await tween(130, (t) => (fox.squash = 1 - 0.12 * Math.sin(t * Math.PI)));
-    fox.sprite = 'fox_jump';
-    sfx.boing(step);
+    hero.pose = 'crouch';
+    await tween(130, (t) => (hero.squash = 1 - 0.12 * Math.sin(t * Math.PI)));
+    hero.pose = 'jump';
+    sfx.hop(step);
     await tween(ms, (t) => {
       const e = easeInOut(t);
-      fox.r = r0 + (r1 - r0) * e;
-      fox.c = c0 + (c1 - c0) * e;
-      fox.z = Math.sin(t * Math.PI) * tileW * height;
-      fox.squash = 1 + 0.08 * Math.sin(t * Math.PI);
+      hero.r = r0 + (r1 - r0) * e;
+      hero.c = c0 + (c1 - c0) * e;
+      hero.z = Math.sin(t * Math.PI) * tileW * height;
+      hero.squash = 1 + 0.08 * Math.sin(t * Math.PI);
     });
-    fox.r = r1;
-    fox.c = c1;
-    fox.z = 0;
-    fox.sprite = 'fox_land';
+    Object.assign(hero, { r: r1, c: c1, z: 0, pose: 'land' });
     sfx.land();
-    await tween(last ? 220 : 120, (t) => (fox.squash = 1 - 0.1 * Math.sin(t * Math.PI)));
-    fox.squash = 1;
+    await tween(last ? 220 : 120, (t) => (hero.squash = 1 - 0.1 * Math.sin(t * Math.PI)));
+    hero.squash = 1;
   }
 
-  async tooMany(n, token) {
-    const fox = this.scene.fox;
+  async tooMany(token) {
+    const hero = this.hero;
     this.misses++;
-    this.ui.showNumber(n, 'show');
-    say(numberWord(n) + '?');
-    await sleep(900);
-    if (token !== this.token) return;
-    sfx.oops();
-    say('Too many! Count the tiles to the ' + (this.level.goal.item === 'chest' ? 'treasure.' : 'star.'));
-    fox.sprite = 'fox_crouch';
-    // head-shake wobble
-    await tween(700, (t) => (fox.flip = Math.sin(t * Math.PI * 6) > 0));
-    fox.flip = false;
+    sfx.tryAgain();
+    say(`Too many! Count the tiles to the ${GOAL_NAMES[this.level.goal.item] ?? 'star'}.`);
+    hero.pose = 'crouch';
+    await tween(700, (t) => (hero.flip = Math.sin(t * Math.PI * 6) > 0)); // head-shake wobble
+    hero.flip = false;
     await sleep(600);
     if (token !== this.token) return;
-    this.ui.showNumber(null);
-    fox.sprite = 'fox_idle';
-    this.setBusy(false);
+    this.endMove();
   }
 
-  async splash(backTo, token) {
+  /** Landed in water ('splash') or on a rock ('bump'): no fail, just hop back and try again. */
+  async bounceBack(backTo, kind, token) {
     this.misses++;
-    const fox = this.scene.fox;
-    const lv = this.level;
-    const [r, c] = lv.path[this.index];
-    sfx.splash();
-    this.scene.burst(r, c, 'splash');
+    const hero = this.hero;
+    const [r, c] = this.level.path[this.index];
+    if (kind === 'splash') {
+      sfx.splash();
+      this.scene.burst(r, c, 'splash');
+      this.ui.showNumber('💦', 'splash');
+    } else {
+      this.ui.showNumber('💥', 'splash');
+    }
+    sfx.tryAgain();
     this.scene.shake = 0.35;
-    this.ui.showNumber('💦', 'splash');
-    fox.sprite = 'fox_crouch';
-    await tween(260, (t) => (fox.z = -Math.sin(t * Math.PI) * this.scene.fit.tileW * 0.12));
-    say('Splash! Try again!');
+    hero.pose = 'crouch';
+    await tween(260, (t) => (hero.z = -Math.sin(t * Math.PI) * this.scene.fit.tileW * (kind === 'splash' ? 0.12 : -0.08)));
+    say(kind === 'splash' ? 'Splash! Try again!' : 'Bonk! Hop over the rock!');
     await sleep(700);
     if (token !== this.token) return;
-    // Bounce back to where this move started.
     await this.hop(this.index, backTo, 0, true, { height: 0.9, ms: 650 });
     if (token !== this.token) return;
     this.index = backTo;
-    this.ui.showNumber(null);
-    fox.sprite = 'fox_idle';
-    this.setBusy(false);
+    this.endMove();
   }
 
   async celebrate(token) {
-    const fox = this.scene.fox;
+    const hero = this.hero;
     const { r, c } = this.scene.goal;
-    fox.sprite = 'fox_cheer';
-    fox.flip = false;
-    sfx.fanfare();
+    hero.pose = 'cheer';
+    hero.flip = false;
+    sfx.levelComplete();
+    sfx.cheer();
     this.scene.burst(r, c, 'confetti');
     this.ui.showNumber('⭐', 'show');
-    say(this.level.goal.item === 'chest' ? 'You found the treasure! Hooray!' : 'You got the star! Hooray!');
-    // little victory bounces
+    voice.greatJob();
     for (let i = 0; i < 3; i++) {
-      await tween(320, (t) => (fox.z = Math.sin(t * Math.PI) * this.scene.fit.tileW * 0.25));
+      await tween(320, (t) => (hero.z = Math.sin(t * Math.PI) * this.scene.fit.tileW * 0.25));
       if (token !== this.token) return;
     }
-    await sleep(300);
+    await sleep(400);
     if (token !== this.token) return;
-    this.ui.win(this.berriesGot, this.berriesTotal, this.stars);
+    const got = this.collectibles.filter((i) => i.taken).length;
+    this.ui.win(got, this.collectibles.length, this.stars);
   }
 }

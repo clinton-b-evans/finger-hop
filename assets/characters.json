@@ -1,0 +1,43 @@
+{
+  "_doc": "Characters + outfits. Anchors are [x, y] fractions of the image (x from left, y from top). Outfit 'width' is a fraction of the character's drawn height; optional 'offset' [dx, dy] nudges it, also in character heights. 'unlock' is {\"stars\": n} (total stars) or {\"level\": id} (finish that level). Preview: python3 tools/outfit_preview.py",
+  "characters": {
+    "fox": {
+      "label": "Fox",
+      "poses": { "idle": "fox_idle", "crouch": "fox_crouch", "jump": "fox_jump", "land": "fox_land", "cheer": "fox_cheer", "wave": "fox_wave" },
+      "headScale": 1
+    },
+    "wolf": {
+      "label": "Wolf",
+      "poses": { "idle": "wolf_idle", "crouch": "wolf_idle", "jump": "wolf_jump", "land": "wolf_idle", "cheer": "wolf_jump", "wave": "wolf_jump" },
+      "headScale": 1
+    },
+    "bear": {
+      "label": "Bear",
+      "poses": { "idle": "bear_idle", "crouch": "bear_idle", "jump": "bear_jump", "land": "bear_idle", "cheer": "bear_jump", "wave": "bear_jump" },
+      "headScale": 1.1
+    }
+  },
+  "sprites": {
+    "fox_idle":   { "feet": [0.44, 0.98], "head": [0.45, 0.10], "eyes": [0.45, 0.30], "neck": [0.44, 0.50] },
+    "fox_crouch": { "feet": [0.50, 0.97], "head": [0.45, 0.13], "eyes": [0.45, 0.43], "neck": [0.43, 0.62] },
+    "fox_jump":   { "feet": [0.48, 0.96], "head": [0.50, 0.10], "eyes": [0.50, 0.30], "neck": [0.48, 0.50] },
+    "fox_land":   { "feet": [0.50, 0.97], "head": [0.44, 0.13], "eyes": [0.43, 0.45], "neck": [0.42, 0.63] },
+    "fox_cheer":  { "feet": [0.50, 0.97], "head": [0.50, 0.10], "eyes": [0.50, 0.28], "neck": [0.50, 0.50] },
+    "fox_wave":   { "feet": [0.55, 0.97], "head": [0.56, 0.10], "eyes": [0.56, 0.30], "neck": [0.56, 0.50] },
+    "wolf_idle":  { "feet": [0.40, 0.98], "head": [0.40, 0.12], "eyes": [0.40, 0.33], "neck": [0.40, 0.52] },
+    "wolf_jump":  { "feet": [0.45, 0.95], "head": [0.48, 0.12], "eyes": [0.48, 0.32], "neck": [0.48, 0.50] },
+    "bear_idle":  { "feet": [0.50, 0.98], "head": [0.50, 0.08], "eyes": [0.50, 0.30], "neck": [0.50, 0.50] },
+    "bear_jump":  { "feet": [0.45, 0.95], "head": [0.50, 0.10], "eyes": [0.50, 0.30], "neck": [0.50, 0.50] }
+  },
+  "slots": ["back", "neck", "eyes", "head"],
+  "outfits": {
+    "hat_party":       { "slot": "head", "anchor": [0.50, 0.95], "width": 0.20, "unlock": { "stars": 0 } },
+    "wear_sunglasses": { "slot": "eyes", "anchor": [0.50, 0.52], "width": 0.42, "unlock": { "stars": 3 } },
+    "wear_scarf":      { "slot": "neck", "anchor": [0.50, 0.24], "width": 0.28, "unlock": { "level": 4 } },
+    "hat_crown":       { "slot": "head", "anchor": [0.50, 0.95], "width": 0.34, "unlock": { "stars": 9 } },
+    "wear_mask":       { "slot": "eyes", "anchor": [0.50, 0.45], "width": 0.44, "unlock": { "level": 8 } },
+    "hat_pirate":      { "slot": "head", "anchor": [0.50, 0.92], "width": 0.40, "unlock": { "stars": 18 } },
+    "wear_cape":       { "slot": "back", "anchor": [0.55, 0.06], "width": 0.52, "offset": [0, -0.07], "unlock": { "level": 12 } },
+    "hat_wizard":      { "slot": "head", "anchor": [0.45, 0.90], "width": 0.36, "unlock": { "level": 15 } }
+  }
+}

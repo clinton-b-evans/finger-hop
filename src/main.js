@@ -1,20 +1,36 @@
-// Entry point: screens, UI wiring, camera + touch input, main render loop.
+// App shell: boot, screens, level select, game wiring, camera + touch input, render loop.
 
 import { loadLevels, progress } from './levels.js';
 import { Scene, loadImages } from './render.js';
 import { Game } from './game.js';
 import { HandInput } from './hands.js';
-import { unlockAudio, sleepAudio, preloadSounds, sfx, say, isMuted, setMuted, onMuteChange } from './audio.js';
+import {
+  unlockAudio,
+  sleepAudio,
+  preloadSounds,
+  sfx,
+  voice,
+  say,
+  playMusic,
+  isMuted,
+  setMuted,
+  isMusicOn,
+  setMusicOn,
+  onAudioSettings,
+} from './audio.js';
+import { loadCharacters, look, sanitizeLook, paintAvatar, unlockedOutfits } from './characters.js';
+import { createWardrobe } from './wardrobe.js';
 
 const $ = (id) => document.getElementById(id);
 const CAM_PREF = 'fingerhop.camera';
 const RING_LEN = 2 * Math.PI * 46;
 const IDLE_NUDGE_MS = 15000;
 
+// ---------- service worker ----------
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW', e));
-  // When an updated worker takes over, reload once so the new version is used — but only
-  // from the start/level screens, never in the middle of a level.
+  // When an updated worker takes over, reload once so the new version is used, but only
+  // from a menu screen, never in the middle of a level.
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadController || $('screen-game').classList.contains('active')) return;
@@ -22,48 +38,81 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   });
 }
 
-// ---------- sound ----------
+// ---------- sound settings ----------
 preloadSounds();
 // Every tap/click/key (re)unlocks audio + speech: iOS needs a gesture, and can
 // suspend audio again after calls, Siri or backgrounding.
 for (const ev of ['touchend', 'pointerdown', 'click', 'keydown']) {
   document.addEventListener(ev, unlockAudio, { capture: true, passive: true });
 }
-onMuteChange((m) =>
+onAudioSettings(() => {
+  const m = isMuted();
   document.querySelectorAll('.mute-btn').forEach((b) => {
     b.textContent = m ? '🔇' : '🔊';
     b.classList.toggle('muted', m);
     b.setAttribute('aria-pressed', String(m));
-  }),
-);
+  });
+  document.querySelectorAll('.music-btn').forEach((b) => {
+    b.classList.toggle('muted', !isMusicOn());
+    b.setAttribute('aria-pressed', String(!isMusicOn()));
+  });
+});
 document.addEventListener('click', (e) => {
-  const b = e.target.closest?.('.mute-btn');
-  if (!b) return;
-  e.stopPropagation();
-  setMuted(!isMuted());
-  if (!isMuted()) {
+  if (e.target.closest?.('.mute-btn')) {
+    e.stopPropagation();
+    setMuted(!isMuted());
+    if (!isMuted()) sfx.tap();
+  } else if (e.target.closest?.('.music-btn')) {
+    e.stopPropagation();
+    setMusicOn(!isMusicOn());
     sfx.tap();
-    say('Sound on!');
   }
 });
 
-const [data, images] = await Promise.all([loadLevels(), loadImages()]);
+// The start screen is one big "tap to play" target. Listen before loading finishes so an
+// early tap isn't lost: it is remembered and acted on once everything is ready.
+let enterFromStart = null;
+let startTappedEarly = false;
+$('screen-start').addEventListener('click', (e) => {
+  if (e.target.closest('.mute-btn, .music-btn')) return;
+  unlockAudio(); // must run inside this tap for iOS
+  if (enterFromStart) enterFromStart();
+  else startTappedEarly = true;
+});
+
+// ---------- data ----------
+const [data] = await Promise.all([loadLevels(), loadCharacters()]);
+const images = await loadImages();
 const levels = data.levels;
 const worlds = data.worlds || [{ id: 1, name: '', icon: '⭐' }];
 
+/** Total stars + finished levels: what outfit unlocks are measured against. */
+function stats() {
+  const done = progress.done;
+  return { done, stars: Object.values(done).reduce((a, d) => a + (d.stars || 0), 0) };
+}
+let currentLook = sanitizeLook(look.get(), stats());
+look.set(currentLook);
+
 // ---------- screens ----------
+let screen = 'start';
 function show(name) {
+  screen = name;
   document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === 'screen-' + name));
   if (name === 'game') {
     scene.resize();
     layoutStage();
+    playMusic('musicLoop');
+  } else if (name === 'start') {
+    paintAvatar($('start-avatar'), images, currentLook, 'wave');
   }
 }
-const inGame = () => $('screen-game').classList.contains('active');
+const inGame = () => screen === 'game';
 
 // ---------- scene + game ----------
 const stage = $('stage');
 const scene = new Scene($('scene'), images);
+scene.look = currentLook;
 let current = null; // level object
 let lastAction = performance.now();
 let turnInLevel = 0;
@@ -78,14 +127,17 @@ const ui = {
     bigNum.classList.add(kind === 'count' ? 'count' : 'show');
     if (kind === 'splash') bigNum.classList.add('splash');
   },
-  setBerries(got, total, pop = false) {
-    const el = $('berry-count');
+  setCollectibles(items, popType) {
+    const el = $('collect-bar');
+    // pop the one just collected
+    const latest = popType ? items.filter((i) => i.taken).sort((a, b) => b.takenT - a.takenT)[0] : null;
     el.innerHTML = '';
-    for (let i = 0; i < total; i++) {
-      const s = document.createElement('span');
-      s.textContent = '🍓';
-      s.className = i < got ? (pop && i === got - 1 ? 'got' : '') : 'miss';
-      el.appendChild(s);
+    for (const it of items) {
+      const img = document.createElement('img');
+      img.src = `assets/${it.type}.png`;
+      img.alt = '';
+      img.className = it.taken ? (it === latest ? 'got' : '') : 'miss';
+      el.appendChild(img);
     }
   },
   setReady(ready) {
@@ -98,7 +150,11 @@ const ui = {
     }
   },
   win(got, total, stars) {
+    const before = new Set(unlockedOutfits(stats()));
     progress.complete(current.id, got, stars);
+    const fresh = unlockedOutfits(stats()).filter((id) => !before.has(id));
+    playMusic(null);
+
     const st = $('win-stars');
     st.innerHTML = '';
     for (let i = 0; i < 3; i++) {
@@ -109,8 +165,11 @@ const ui = {
       st.appendChild(s);
       if (i < stars) setTimeout(() => sfx.star(i), 300 + i * 350);
     }
-    $('win-berries').textContent = '🍓'.repeat(got);
+    $('win-unlock').innerHTML = fresh.map((id) => `<img src="assets/${id}.png" alt="">`).join('');
+    $('win-unlock').classList.toggle('hidden', !fresh.length);
+    if (fresh.length) setTimeout(() => say('You got something new to wear!'), 1500);
     $('win').classList.remove('hidden');
+    paintAvatar($('win-avatar'), images, currentLook, 'cheer');
   },
 };
 const game = new Game(scene, ui);
@@ -130,7 +189,6 @@ function startTurn() {
   turnInLevel++;
   hands.beginTurn();
   if (hands.active && turnInLevel === 1) {
-    // First turn of a level: explain once, after the level hint has been spoken.
     setTimeout(() => {
       if (hands.phase === 'ready') say('Hands down. Get ready to count!', { interrupt: false });
     }, 200);
@@ -141,10 +199,10 @@ function startTurn() {
 function renderLevels() {
   const list = $('level-list');
   list.innerHTML = '';
-  const done = progress.done;
+  const { done, stars } = stats();
   const next = levels.find((l) => !(l.id in done));
-  const totalStars = Object.values(done).reduce((a, d) => a + (d.stars || 0), 0);
-  $('levels-total').textContent = `⭐ ${totalStars} / ${levels.length * 3}`;
+  $('levels-total').textContent = `⭐ ${stars} / ${levels.length * 3}`;
+  paintAvatar($('dressup-avatar'), images, currentLook, 'idle');
   for (const w of worlds) {
     const lvls = levels.filter((l) => (l.world ?? 1) === w.id);
     if (!lvls.length) continue;
@@ -159,21 +217,14 @@ function renderLevels() {
       const b = document.createElement('button');
       b.className = 'level-btn' + (lv === next && open ? ' next' : '') + (open ? '' : ' locked');
       b.setAttribute('aria-label', `Level ${lv.id}` + (open ? '' : ' (locked)'));
-      const goalImg = lv.goal.item === 'chest' ? 'chest' : 'star';
-      const stars = d
-        ? [0, 1, 2].map((i) => `<span class="${i < d.stars ? '' : 'off'}">⭐</span>`).join('')
-        : '';
+      const starsHtml = d ? [0, 1, 2].map((i) => `<span class="${i < d.stars ? '' : 'off'}">⭐</span>`).join('') : '';
       b.innerHTML = `
         <span class="lv-num">${lv.id}</span>
-        <img src="assets/${goalImg}.png" alt="">
-        <span class="lv-stars">${stars}</span>
+        <img src="assets/${lv.goal.item || 'star'}.png" alt="">
+        <span class="lv-stars">${starsHtml}</span>
         ${open ? '' : '<span class="lock">🔒</span>'}`;
       b.addEventListener('click', () => {
-        unlockAudio();
-        if (!open) {
-          sfx.oops();
-          return;
-        }
+        if (!open) return sfx.tryAgain();
         sfx.tap();
         startLevel(lv);
       });
@@ -182,7 +233,6 @@ function renderLevels() {
     sec.appendChild(grid);
     list.appendChild(sec);
   }
-  // Scroll the next level into view.
   requestAnimationFrame(() => list.querySelector('.next')?.scrollIntoView({ block: 'center' }));
 }
 function goLevels() {
@@ -192,6 +242,27 @@ function goLevels() {
   renderLevels();
   show('levels');
 }
+
+// ---------- dress-up ----------
+const wardrobe = createWardrobe({
+  images,
+  stats,
+  onChange(l) {
+    currentLook = l;
+    scene.look = l;
+  },
+});
+$('btn-dressup').addEventListener('click', () => {
+  sfx.tap();
+  show('wardrobe');
+  wardrobe.open();
+});
+$('btn-wardrobe-back').addEventListener('click', () => {
+  sfx.tap();
+  renderLevels();
+  show('levels');
+});
+$('wardrobe-preview').addEventListener('click', () => wardrobe.poke());
 
 // ---------- touch pad ----------
 const pad = $('pad');
@@ -216,8 +287,9 @@ function flashPad(n) {
   b.classList.add('hit');
   setTimeout(() => b.classList.remove('hit'), 300);
 }
+/** A number was chosen (fingers, GO, button or key). Ignored until the hero is ready. */
 function act(n) {
-  if (game.busy) return; // ignore everything until the fox has landed and the next turn starts
+  if (game.busy) return;
   lastAction = performance.now();
   hands.endTurn();
   flashPad(Math.min(n, current?.maxHop ?? 5));
@@ -262,10 +334,7 @@ const hands = new HandInput({
   onPhase(phase) {
     if (phase === 'count' && inGame() && !game.busy) sfx.ready();
   },
-  onCount(n) {
-    sfx.lock();
-    act(n);
-  },
+  onCount: act, // game.move() plays the "correct" chime and says the number
 });
 $('btn-go').addEventListener('pointerdown', (e) => {
   e.preventDefault();
@@ -316,7 +385,6 @@ function stopCamera(remember = true) {
   layoutStage();
 }
 $('btn-cam').addEventListener('click', () => {
-  unlockAudio();
   if (hands.active) {
     stopCamera();
   } else {
@@ -337,34 +405,31 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (hands.active) hands.stop();
     sleepAudio();
-  } else if (wantCamera && !hands.active && !$('screen-start').classList.contains('active')) {
+  } else if (wantCamera && !hands.active && screen !== 'start') {
     startCamera();
   }
 });
 
 // ---------- buttons ----------
-// The whole start screen is the "tap to play" target.
-$('screen-start').addEventListener('click', (e) => {
-  if (e.target.closest('.mute-btn')) return;
-  unlockAudio(); // must run inside this tap for iOS
+enterFromStart = () => {
   sfx.tap();
-  say('Hi! Let’s hop!');
+  voice.hopHop();
+  playMusic('jingle');
   renderLevels();
   show('levels');
   if (wantCamera && !hands.active) startCamera();
-});
+};
 $('btn-levels-back').addEventListener('click', () => {
   sfx.tap();
+  playMusic(null);
   show('start');
 });
 $('btn-home').addEventListener('click', () => {
   sfx.tap();
+  playMusic(null);
   goLevels();
 });
-$('btn-hint').addEventListener('click', () => {
-  unlockAudio();
-  game.sayHint();
-});
+$('btn-hint').addEventListener('click', () => game.sayHint());
 $('btn-win-home').addEventListener('click', () => {
   sfx.tap();
   goLevels();
@@ -392,6 +457,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+show('start');
+if (startTappedEarly) enterFromStart();
 
 // Handy for debugging in the console.
 window.fingerHop = { game, hands, scene, levels };
