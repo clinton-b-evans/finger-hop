@@ -58,6 +58,7 @@ export class Scene {
     this.items = [];
     this.goal = null;
     this.badges = []; // [{r, c, n}] numbered hints on the tiles ahead
+    this.insets = { top: 0, left: 0 };
     this.shake = 0;
     this.fit = { tileW: 100, ox: 0, oy: 0 };
     this.dpr = 1;
@@ -112,16 +113,22 @@ export class Scene {
     lv.decor.forEach((d) => add(d.row, d.col));
     const spanX = maxX - minX;
     const spanY = maxY - minY;
-    // Leave space at the top for the camera bubble and the big number.
-    // (In wide/landscape stages the camera bubble sits in a corner, so less is needed.)
-    const wide = this.cssW > this.cssH * 1.25;
-    const topPad = wide ? this.cssH * 0.04 : Math.min(this.cssH * 0.18, 140);
-    const availW = this.cssW * 0.94;
-    const availH = (this.cssH - topPad) * 0.94;
-    const tileW = Math.min(availW / spanX, availH / spanY, wide ? this.cssH * 0.6 : this.cssW * 0.42, 260);
-    const ox = (this.cssW - spanX * tileW) / 2 - minX * tileW;
-    const oy = topPad + (this.cssH - topPad - spanY * tileW) / 2 - minY * tileW;
+    // Keep clear of the camera bubble: main.js reports it as a top or left inset.
+    const { top = 0, left = 0 } = this.insets;
+    const W = this.cssW - left;
+    const H = this.cssH - top;
+    const availW = W * 0.94;
+    const availH = H * 0.92;
+    const tileW = Math.min(availW / spanX, availH / spanY, Math.min(W * 0.42, H * 0.6), 260);
+    const ox = left + (W - spanX * tileW) / 2 - minX * tileW;
+    const oy = top + (H - spanY * tileW) / 2 - minY * tileW;
     this.fit = { tileW, ox, oy };
+  }
+
+  setInsets(insets) {
+    if (insets.top === this.insets.top && insets.left === this.insets.left) return;
+    this.insets = insets;
+    if (this.level) this.computeFit();
   }
 
   /** Screen position (CSS px) of the top-face centre of tile (r, c). */

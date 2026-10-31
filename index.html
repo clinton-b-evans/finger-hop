@@ -21,7 +21,11 @@
 
   <!-- Level select -->
   <section id="screen-levels" class="screen" aria-label="Pick a level">
-    <div id="level-grid" class="level-grid"></div>
+    <div class="levels-top">
+      <button id="btn-levels-back" class="icon-btn" aria-label="Back">⬅</button>
+      <div id="levels-total" class="levels-total" aria-label="Stars"></div>
+    </div>
+    <div id="level-list"></div>
   </section>
 
   <!-- Game -->
@@ -29,6 +33,7 @@
     <header class="topbar">
       <button id="btn-home" class="icon-btn" aria-label="Levels">🏠</button>
       <div id="berry-count" class="berries" aria-label="Strawberries"></div>
+      <button id="btn-cam" class="icon-btn" aria-label="Camera on or off">📷</button>
       <button id="btn-hint" class="icon-btn" aria-label="Say hint">🔊</button>
     </header>
 
@@ -43,10 +48,12 @@
           <circle class="ring-bg" cx="50" cy="50" r="46"></circle>
           <circle id="ring-fg" class="ring-fg" cx="50" cy="50" r="46"></circle>
         </svg>
-        <div id="cam-count" class="cam-count"></div>
+        <!-- get-ready overlay: hands down, breathe, then show fingers -->
+        <div class="cam-ready" aria-hidden="true"><span class="hands">🙌</span><span class="down">⬇</span></div>
+        <div id="cam-num" class="cam-num"></div>
         <button id="btn-flip" class="cam-flip" aria-label="Switch camera">🔄</button>
+        <button id="btn-go" class="go-btn" aria-label="Go">GO</button>
       </div>
-      <button id="btn-cam" class="icon-btn cam-toggle" aria-label="Camera on or off">📷</button>
     </div>
 
     <nav id="pad" class="pad" aria-label="Hop buttons"></nav>
@@ -54,6 +61,7 @@
     <!-- Celebration overlay -->
     <div id="win" class="win hidden">
       <img src="assets/fox_cheer.png" alt="" class="win-fox">
+      <div id="win-stars" class="win-stars"></div>
       <div id="win-berries" class="win-berries"></div>
       <div class="win-buttons">
         <button id="btn-win-home" class="big-round small" aria-label="Levels">🏠</button>

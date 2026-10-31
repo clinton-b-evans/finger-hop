@@ -2,7 +2,7 @@
 // bundle / WASM / model from the CDN the first time they are fetched.
 // Bump VERSION whenever app files change.
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const APP_CACHE = `fingerhop-app-${VERSION}`;
 const CDN_CACHE = 'fingerhop-cdn-v1'; // versioned URLs, safe to keep across app versions
 
@@ -28,7 +28,14 @@ const APP_FILES = [
 const CDN_HOSTS = ['cdn.jsdelivr.net', 'storage.googleapis.com'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(APP_CACHE).then((c) => c.addAll(APP_FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser HTTP cache (GitHub Pages sends max-age=600) so a new
+  // VERSION really fetches the new files.
+  e.waitUntil(
+    caches
+      .open(APP_CACHE)
+      .then((c) => c.addAll(APP_FILES.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (e) => {

@@ -85,6 +85,18 @@ export const sfx = {
     tone({ type: 'sine', f0: 660, dur: 0.1, peak: 0.35 });
     tone({ type: 'sine', f0: 990, dur: 0.16, peak: 0.35, delay: 0.08 });
   },
+  oops() {
+    tone({ type: 'triangle', f0: 440, f1: 330, dur: 0.18, peak: 0.35 });
+    tone({ type: 'triangle', f0: 330, f1: 220, dur: 0.3, peak: 0.35, delay: 0.18 });
+  },
+  ready() {
+    // soft two-note "your turn" chime
+    tone({ type: 'sine', f0: 784, dur: 0.18, peak: 0.25 });
+    tone({ type: 'sine', f0: 1175, dur: 0.3, peak: 0.25, delay: 0.14 });
+  },
+  star(i = 0) {
+    tone({ type: 'triangle', f0: 1047 * 2 ** (i * 4 / 12), dur: 0.25, peak: 0.35 });
+  },
   tap() {
     tone({ type: 'triangle', f0: 520, f1: 700, dur: 0.08, peak: 0.25 });
   },

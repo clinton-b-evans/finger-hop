@@ -46,6 +46,8 @@ export class Game {
     const token = ++this.token;
     this.level = level;
     this.index = 0;
+    this.misses = 0; // splashes + "too many" tries, for the star rating
+    this.turns = 0;
     this.scene.setLevel(level, tileKey);
     this.ui.setBerries(0, this.berriesTotal);
     this.setBusy(true);
@@ -82,15 +84,27 @@ export class Game {
     say(this.level?.hint || 'Show me fingers!');
   }
 
+  /** Stars for the finished level: 1 for the goal, +1 all strawberries, +1 no splashes / overshoots. */
+  get stars() {
+    return 1 + (this.berriesGot === this.berriesTotal ? 1 : 0) + (this.misses === 0 ? 1 : 0);
+  }
+
   /** Main action: hop n tiles forward. */
   async move(n) {
     if (this.busy || !this.level) return;
     const token = this.token;
     const lv = this.level;
     const start = this.index;
-    const steps = Math.min(Math.max(1, Math.min(n, lv.maxHop)), lv.goal.index - start);
-    if (steps <= 0) return;
+    const want = Math.max(1, Math.min(n, lv.maxHop));
+    this.turns++;
     this.setBusy(true);
+
+    // Puzzle levels: you must land exactly on the goal, so too many hops is a gentle "no".
+    if (lv.goal.exact && start + want > lv.goal.index) {
+      await this.tooMany(want, token);
+      return;
+    }
+    const steps = Math.min(want, lv.goal.index - start);
 
     this.ui.showNumber(steps, 'show');
     say(numberWord(steps) + '!');
@@ -163,7 +177,28 @@ export class Game {
     fox.squash = 1;
   }
 
+  async tooMany(n, token) {
+    const fox = this.scene.fox;
+    this.misses++;
+    this.ui.showNumber(n, 'show');
+    say(numberWord(n) + '?');
+    await sleep(900);
+    if (token !== this.token) return;
+    sfx.oops();
+    say('Too many! Count the tiles to the ' + (this.level.goal.item === 'chest' ? 'treasure.' : 'star.'));
+    fox.sprite = 'fox_crouch';
+    // head-shake wobble
+    await tween(700, (t) => (fox.flip = Math.sin(t * Math.PI * 6) > 0));
+    fox.flip = false;
+    await sleep(600);
+    if (token !== this.token) return;
+    this.ui.showNumber(null);
+    fox.sprite = 'fox_idle';
+    this.setBusy(false);
+  }
+
   async splash(backTo, token) {
+    this.misses++;
     const fox = this.scene.fox;
     const lv = this.level;
     const [r, c] = lv.path[this.index];
@@ -201,6 +236,6 @@ export class Game {
     }
     await sleep(300);
     if (token !== this.token) return;
-    this.ui.win(this.berriesGot, this.berriesTotal);
+    this.ui.win(this.berriesGot, this.berriesTotal, this.stars);
   }
 }

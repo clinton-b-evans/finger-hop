@@ -9,9 +9,16 @@ export const MP_URLS = {
     'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
 };
 
-export const HOLD_MS = 1000; // count must be steady this long before it acts
+// Timings can be tuned per device with URL params, e.g. ?hold=2000&ready=2000
+const params = new URLSearchParams(globalThis.location?.search ?? '');
+const num = (k, d) => (params.has(k) && !isNaN(+params.get(k)) ? +params.get(k) : d);
+export const HOLD_MS = num('hold', 1800); // count must stay the same this long before it locks
+export const READY_MS = num('ready', 1500); // calm "get ready" pause at the start of every turn
+const READY_TIMEOUT_MS = 5000; // if the hand never goes down, start counting anyway after this
+const DOWN_MS = 300; // "hands down" must last this long to count
+const BLIP_MS = 300; // a different number must persist this long before it resets the ring
 const DETECT_EVERY_MS = 66; // ~15 fps is plenty and saves battery
-const SMOOTH_FRAMES = 5;
+const SMOOTH_FRAMES = 7; // majority vote over ~0.45 s
 
 // Landmark indices
 const WRIST = 0, THUMB_IP = 3, THUMB_TIP = 4, INDEX_MCP = 5, MIDDLE_MCP = 9, PINKY_MCP = 17;
@@ -59,21 +66,26 @@ export class HandInput {
    * @param {object} o
    * @param {HTMLVideoElement} o.video
    * @param {HTMLCanvasElement} o.overlay
-   * @param {(s:{count:number, progress:number, locked:boolean, hand:boolean})=>void} o.onUpdate
-   * @param {(n:number)=>void} o.onCount fired once per steady count
+   * @param {(s:{phase:string, count:number, progress:number, readyLeft:number, needDown:boolean, hand:boolean})=>void} o.onUpdate
+   * @param {(n:number)=>void} o.onCount fired once per turn with the locked-in count
+   * @param {(phase:string)=>void} [o.onPhase] called when counting opens
    */
-  constructor({ video, overlay, onUpdate, onCount }) {
-    Object.assign(this, { video, overlay, onUpdate, onCount });
+  constructor({ video, overlay, onUpdate, onCount, onPhase }) {
+    Object.assign(this, { video, overlay, onUpdate, onCount, onPhase });
     this.facing = 'user';
     this.stream = null;
     this.landmarker = null;
-    this.accepting = false; // the game sets this when the fox is ready
+    // Turn phases: 'off' (fox busy) -> 'ready' (calm pause, hands down) -> 'count' -> fires -> 'off'
+    this.phase = 'off';
     this.history = [];
+    this.count = 0;
+    this.hand = false;
     this.candidate = 0;
     this.since = 0;
-    this.locked = false;
-    this.lockedCount = 0;
-    this.zeroSince = 0;
+    this.diffSince = 0;
+    this.readySince = 0;
+    this.downSince = 0;
+    this.sawDown = false;
     this.lastDetect = 0;
     this.running = false;
     this.loop = this.loop.bind(this);
@@ -133,13 +145,62 @@ export class HandInput {
     this.stopStream();
     this.running = false;
     this.reset();
-    this.onUpdate({ count: 0, progress: 0, locked: false, hand: false });
+    this.count = 0;
+    this.hand = false;
+    this.emit(performance.now());
   }
 
   reset() {
     this.history = [];
     this.candidate = 0;
+    this.diffSince = 0;
     this.since = performance.now();
+  }
+
+  /** Start a new turn: calm "get ready" pause, then counting. */
+  beginTurn(now = performance.now()) {
+    this.reset();
+    this.phase = 'ready';
+    this.readySince = now;
+    this.downSince = 0;
+    this.sawDown = false;
+    this.emit(now);
+  }
+
+  /** Fox is moving / screen changed: ignore hands until the next beginTurn. */
+  endTurn() {
+    this.phase = 'off';
+    this.emit(performance.now());
+  }
+
+  /** "Go!" button: accept whatever number is showing right now. */
+  confirm() {
+    if (this.phase === 'count' && this.count > 0) {
+      this.fire(this.count);
+      return true;
+    }
+    return false;
+  }
+
+  fire(n) {
+    this.phase = 'off';
+    this.emit(performance.now());
+    this.onCount(n);
+  }
+
+  emit(now) {
+    const progress =
+      this.phase === 'count' && this.candidate > 0 ? Math.min(1, (now - this.since) / HOLD_MS) : 0;
+    const readyLeft = this.phase === 'ready' ? Math.max(0, 1 - (now - this.readySince) / READY_MS) : 0;
+    this.onUpdate({
+      phase: this.phase,
+      count: this.count,
+      hand: this.hand,
+      progress,
+      readyLeft, // 1 -> 0 over the calm pause
+      needDown: this.phase === 'ready' && !this.sawDown && this.count > 0,
+    });
+    return progress;
   }
 
   loop(now) {
@@ -169,31 +230,42 @@ export class HandInput {
     this.history.push(raw);
     if (this.history.length > SMOOTH_FRAMES) this.history.shift();
     const count = mode(this.history);
+    this.count = count;
+    this.hand = hand;
 
-    // Unlock once the hand goes away / makes a fist, or shows a different number.
-    if (this.locked) {
+    if (this.phase === 'ready') {
+      // Wait for a calm moment with hands down (or give up waiting after a while).
       if (count === 0) {
-        this.zeroSince ||= now;
-        if (now - this.zeroSince > 250) this.locked = false;
+        this.downSince ||= now;
+        if (now - this.downSince >= DOWN_MS) this.sawDown = true;
       } else {
-        this.zeroSince = 0;
-        if (count !== this.lockedCount) this.locked = false;
+        this.downSince = 0;
+      }
+      const waited = now - this.readySince;
+      if (waited >= READY_MS && (this.sawDown || waited >= READY_TIMEOUT_MS)) {
+        this.phase = 'count';
+        this.candidate = count;
+        this.since = now;
+        this.diffSince = 0;
+        this.onPhase?.('count');
+      }
+    } else if (this.phase === 'count') {
+      if (count !== this.candidate) {
+        // Ignore brief in-between numbers while fingers are moving.
+        this.diffSince ||= now;
+        if (now - this.diffSince >= BLIP_MS || this.candidate === 0) {
+          this.candidate = count;
+          // The hold counts from when this number first appeared, not from when the filter accepted it.
+          this.since = this.candidate === 0 ? now : this.diffSince;
+          this.diffSince = 0;
+        }
+      } else {
+        this.diffSince = 0;
       }
     }
 
-    if (count !== this.candidate || !this.accepting || this.locked) {
-      if (count !== this.candidate) this.candidate = count;
-      this.since = now;
-    }
-    const progress = count > 0 && this.accepting && !this.locked ? Math.min(1, (now - this.since) / HOLD_MS) : 0;
-    this.onUpdate({ count, progress, locked: this.locked, hand });
-
-    if (progress >= 1) {
-      this.locked = true;
-      this.lockedCount = count;
-      this.zeroSince = 0;
-      this.onCount(count);
-    }
+    const progress = this.emit(now);
+    if (this.phase === 'count' && progress >= 1) this.fire(this.candidate);
   }
 
   drawOverlay(hands) {
