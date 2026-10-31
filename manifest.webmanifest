@@ -1,0 +1,13 @@
+{
+  "name": "Finger Hop",
+  "short_name": "Finger Hop",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#8fd3f4",
+  "theme_color": "#8fd3f4",
+  "icons": [
+    { "src": "assets/fox_wave.png", "sizes": "326x358", "type": "image/png", "purpose": "any" }
+  ]
+}

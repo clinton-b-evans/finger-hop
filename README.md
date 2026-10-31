@@ -38,3 +38,22 @@ Transparent PNGs: `fox_idle, fox_crouch, fox_jump, fox_land, fox_cheer, fox_wave
 }
 ```
 Rule: a hop whose landing path tile is `W` (water) fails softly; water must be jumped over by choosing the exact count.
+
+## How to run / deploy
+
+No build step: it's static files (`index.html`, `style.css`, `src/*.js` ES modules, `sw.js`).
+
+**Run locally**
+```bash
+python3 -m http.server 8000      # or: npx serve .
+```
+Open http://localhost:8000. Camera access needs a secure context: `localhost` works, but a phone on your LAN needs HTTPS. For a quick phone test, use a tunnel (e.g. `npx localtunnel --port 8000` or `cloudflared tunnel --url http://localhost:8000`) or deploy.
+
+**Deploy to GitHub Pages**: Settings → Pages → *Deploy from a branch* → `main` / root. Every file path is relative, so it works under `https://<user>.github.io/finger-hop/`. Netlify also works: drag the folder in, no build command.
+
+**Notes**
+- MediaPipe `tasks-vision@0.10.21` (bundle + WASM) loads from jsDelivr, and the `hand_landmarker.task` model (~7.8 MB) from Google Storage. `sw.js` caches them after the first load, together with the app and sprites, so later visits work offline. Bump `VERSION` in `sw.js` when you change app files.
+- If the camera is denied or unavailable, the game hides the camera bubble and the 1–5 buttons still work. 📷 turns the camera on/off (remembered); 🔄 switches front/back.
+- Desktop: keys `1`–`5` also hop.
+- Progress (completed levels + strawberries) is saved in `localStorage` under `fingerhop.progress.v1`.
+- Code map: `src/main.js` (screens, UI, input wiring), `src/game.js` (rules + hop sequencing), `src/render.js` (isometric canvas), `src/hands.js` (camera, finger counting, 1 s debounce), `src/audio.js` (WebAudio sfx + speech), `src/levels.js` (level loading + progress).

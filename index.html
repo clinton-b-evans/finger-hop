@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#8fd3f4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Finger Hop</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/fox_idle.png">
+  <link rel="apple-touch-icon" href="assets/fox_wave.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Start screen: one giant play button (also unlocks audio + speech + camera on iOS) -->
+  <section id="screen-start" class="screen active" aria-label="Start">
+    <img class="start-fox" src="assets/fox_wave.png" alt="">
+    <button id="btn-play" class="big-round play" aria-label="Play">▶</button>
+  </section>
+
+  <!-- Level select -->
+  <section id="screen-levels" class="screen" aria-label="Pick a level">
+    <div id="level-grid" class="level-grid"></div>
+  </section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen" aria-label="Game">
+    <header class="topbar">
+      <button id="btn-home" class="icon-btn" aria-label="Levels">🏠</button>
+      <div id="berry-count" class="berries" aria-label="Strawberries"></div>
+      <button id="btn-hint" class="icon-btn" aria-label="Say hint">🔊</button>
+    </header>
+
+    <div id="stage" class="stage">
+      <canvas id="scene"></canvas>
+      <div id="big-num" class="big-num" aria-live="polite"></div>
+
+      <div id="cam" class="cam hidden">
+        <video id="cam-video" playsinline muted autoplay></video>
+        <canvas id="cam-overlay"></canvas>
+        <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ring-bg" cx="50" cy="50" r="46"></circle>
+          <circle id="ring-fg" class="ring-fg" cx="50" cy="50" r="46"></circle>
+        </svg>
+        <div id="cam-count" class="cam-count"></div>
+        <button id="btn-flip" class="cam-flip" aria-label="Switch camera">🔄</button>
+      </div>
+      <button id="btn-cam" class="icon-btn cam-toggle" aria-label="Camera on or off">📷</button>
+    </div>
+
+    <nav id="pad" class="pad" aria-label="Hop buttons"></nav>
+
+    <!-- Celebration overlay -->
+    <div id="win" class="win hidden">
+      <img src="assets/fox_cheer.png" alt="" class="win-fox">
+      <div id="win-berries" class="win-berries"></div>
+      <div class="win-buttons">
+        <button id="btn-win-home" class="big-round small" aria-label="Levels">🏠</button>
+        <button id="btn-next" class="big-round play" aria-label="Next level">▶</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
