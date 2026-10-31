@@ -4,7 +4,7 @@ import { loadLevels, progress } from './levels.js';
 import { Scene, loadImages } from './render.js';
 import { Game } from './game.js';
 import { HandInput } from './hands.js';
-import { unlockAudio, sfx, say } from './audio.js';
+import { unlockAudio, sleepAudio, preloadSounds, sfx, say, isMuted, setMuted, onMuteChange } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const CAM_PREF = 'fingerhop.camera';
@@ -21,6 +21,31 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
     location.reload();
   });
 }
+
+// ---------- sound ----------
+preloadSounds();
+// Every tap/click/key (re)unlocks audio + speech: iOS needs a gesture, and can
+// suspend audio again after calls, Siri or backgrounding.
+for (const ev of ['touchend', 'pointerdown', 'click', 'keydown']) {
+  document.addEventListener(ev, unlockAudio, { capture: true, passive: true });
+}
+onMuteChange((m) =>
+  document.querySelectorAll('.mute-btn').forEach((b) => {
+    b.textContent = m ? '🔇' : '🔊';
+    b.classList.toggle('muted', m);
+    b.setAttribute('aria-pressed', String(m));
+  }),
+);
+document.addEventListener('click', (e) => {
+  const b = e.target.closest?.('.mute-btn');
+  if (!b) return;
+  e.stopPropagation();
+  setMuted(!isMuted());
+  if (!isMuted()) {
+    sfx.tap();
+    say('Sound on!');
+  }
+});
 
 const [data, images] = await Promise.all([loadLevels(), loadImages()]);
 const levels = data.levels;
@@ -311,15 +336,17 @@ $('btn-flip').addEventListener('click', async () => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (hands.active) hands.stop();
-    speechSynthesis?.cancel();
+    sleepAudio();
   } else if (wantCamera && !hands.active && !$('screen-start').classList.contains('active')) {
     startCamera();
   }
 });
 
 // ---------- buttons ----------
-$('btn-play').addEventListener('click', () => {
-  unlockAudio();
+// The whole start screen is the "tap to play" target.
+$('screen-start').addEventListener('click', (e) => {
+  if (e.target.closest('.mute-btn')) return;
+  unlockAudio(); // must run inside this tap for iOS
   sfx.tap();
   say('Hi! Let’s hop!');
   renderLevels();

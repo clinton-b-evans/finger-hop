@@ -14,9 +14,12 @@
 </head>
 <body>
   <!-- Start screen: one giant play button (also unlocks audio + speech + camera on iOS) -->
+  <!-- The whole screen is one big "tap to play" target: that first tap unlocks sound + speech on iOS. -->
   <section id="screen-start" class="screen active" aria-label="Start">
+    <button class="icon-btn mute-btn corner" aria-label="Sound on or off">🔊</button>
     <img class="start-fox" src="assets/fox_wave.png" alt="">
-    <button id="btn-play" class="big-round play" aria-label="Play">▶</button>
+    <button id="btn-play" class="big-round play" aria-label="Tap to play">▶</button>
+    <div class="tap-hint" aria-hidden="true"><span class="finger">👆</span> Tap to play</div>
   </section>
 
   <!-- Level select -->
@@ -24,6 +27,7 @@
     <div class="levels-top">
       <button id="btn-levels-back" class="icon-btn" aria-label="Back">⬅</button>
       <div id="levels-total" class="levels-total" aria-label="Stars"></div>
+      <button class="icon-btn mute-btn" aria-label="Sound on or off">🔊</button>
     </div>
     <div id="level-list"></div>
   </section>
@@ -34,7 +38,8 @@
       <button id="btn-home" class="icon-btn" aria-label="Levels">🏠</button>
       <div id="berry-count" class="berries" aria-label="Strawberries"></div>
       <button id="btn-cam" class="icon-btn" aria-label="Camera on or off">📷</button>
-      <button id="btn-hint" class="icon-btn" aria-label="Say hint">🔊</button>
+      <button id="btn-hint" class="icon-btn" aria-label="Say the hint again">💬</button>
+      <button class="icon-btn mute-btn" aria-label="Sound on or off">🔊</button>
     </header>
 
     <div id="stage" class="stage">

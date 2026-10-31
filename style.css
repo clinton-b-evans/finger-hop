@@ -60,6 +60,18 @@ button {
   filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .15));
 }
 
+.tap-hint {
+  font-size: min(7vw, 4vh);
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 1.5px var(--orange);
+  paint-order: stroke fill;
+}
+.tap-hint .finger { display: inline-block; animation: tap-finger 1s ease-in-out infinite; -webkit-text-stroke: 0; }
+.icon-btn.corner { position: absolute; top: calc(10px + var(--safe-t)); right: 12px; }
+.mute-btn.muted { background: #ffe1d6; }
+@keyframes tap-finger { 50% { transform: translateY(-20%); } }
+
 .big-round {
   width: min(34vw, 22vh);
   height: min(34vw, 22vh);
@@ -92,7 +104,8 @@ button {
   -webkit-overflow-scrolling: touch;
   padding: 12px 12px calc(24px + var(--safe-b));
 }
-.levels-top { width: min(94vw, 900px); display: flex; justify-content: space-between; align-items: center; }
+.levels-top { width: min(94vw, 900px); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.levels-top .levels-total { flex: 1; text-align: right; }
 .levels-total { font-size: 28px; font-weight: 900; color: var(--ink); }
 .world { width: min(94vw, 900px); margin-top: 14px; }
 .world-head {
@@ -174,6 +187,10 @@ button {
   box-shadow: 0 4px 0 rgba(0, 0, 0, .12);
 }
 .icon-btn:active { transform: translateY(3px); box-shadow: none; }
+@media (max-width: 380px) {
+  .topbar .icon-btn { width: 48px; height: 48px; font-size: 24px; }
+  .topbar .berries { font-size: 24px; letter-spacing: 1px; }
+}
 .berries {
   flex: 1;
   text-align: center;

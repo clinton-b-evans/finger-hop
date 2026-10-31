@@ -2,7 +2,7 @@
 // bundle / WASM / model from the CDN the first time they are fetched.
 // Bump VERSION whenever app files change.
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const APP_CACHE = `fingerhop-app-${VERSION}`;
 const CDN_CACHE = 'fingerhop-cdn-v1'; // versioned URLs, safe to keep across app versions
 
@@ -11,6 +11,8 @@ const SPRITES = [
   'tile_grass', 'tile_sand', 'tile_water', 'tile_stone', 'tile_number', 'tile_bridge',
   'strawberry', 'star', 'chest', 'bush', 'tree', 'flowers',
 ];
+// Keep in sync with src/sounds.js
+const SFX = ['boing', 'land', 'collect', 'splash', 'fanfare', 'oops', 'ready', 'lock', 'tap', 'star'];
 const APP_FILES = [
   './',
   'index.html',
@@ -23,7 +25,9 @@ const APP_FILES = [
   'src/hands.js',
   'src/audio.js',
   'src/levels.js',
+  'src/sounds.js',
   ...SPRITES.map((s) => `assets/${s}.png`),
+  ...SFX.map((s) => `assets/sfx/${s}.wav`),
 ];
 const CDN_HOSTS = ['cdn.jsdelivr.net', 'storage.googleapis.com'];
 
