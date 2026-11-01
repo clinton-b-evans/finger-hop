@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#8fd3f4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Finger Hop</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/fox_idle.png">
+  <link rel="apple-touch-icon" href="assets/fox_wave.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- The whole screen is one big "tap to play" target: that first tap unlocks sound + speech on iOS. -->
+  <section id="screen-start" class="screen active" aria-label="Start">
+    <div class="corner">
+      <button class="icon-btn music-btn" aria-label="Music on or off">🎵</button>
+      <button class="icon-btn mute-btn" aria-label="Sound on or off">🔊</button>
+    </div>
+    <canvas id="start-avatar" class="start-fox" aria-hidden="true"></canvas>
+    <button id="btn-play" class="big-round play" aria-label="Tap to play">▶</button>
+    <div class="tap-hint" aria-hidden="true"><span class="finger">👆</span> Tap to play</div>
+  </section>
+
+  <!-- Level select -->
+  <section id="screen-levels" class="screen" aria-label="Pick a level">
+    <div class="levels-top">
+      <button id="btn-levels-back" class="icon-btn" aria-label="Back">⬅</button>
+      <button id="btn-dressup" class="dressup-btn" aria-label="Dress up">
+        <canvas id="dressup-avatar" aria-hidden="true"></canvas><span class="badge">👕</span>
+      </button>
+      <div id="levels-total" class="levels-total" aria-label="Stars"></div>
+      <button class="icon-btn music-btn" aria-label="Music on or off">🎵</button>
+      <button class="icon-btn mute-btn" aria-label="Sound on or off">🔊</button>
+    </div>
+    <div id="level-list"></div>
+  </section>
+
+  <!-- Dress-up: pick a character and outfits -->
+  <section id="screen-wardrobe" class="screen" aria-label="Dress up">
+    <div class="levels-top">
+      <button id="btn-wardrobe-back" class="icon-btn" aria-label="Back">⬅</button>
+      <div id="wardrobe-stars" class="levels-total" aria-label="Stars"></div>
+      <button class="icon-btn mute-btn" aria-label="Sound on or off">🔊</button>
+    </div>
+    <div class="wardrobe">
+      <canvas id="wardrobe-preview" class="wardrobe-preview" aria-label="Your character"></canvas>
+      <div class="wardrobe-pick">
+        <div id="char-row" class="char-row"></div>
+        <div id="outfit-grid" class="outfit-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen" aria-label="Game">
+    <header class="topbar">
+      <button id="btn-home" class="icon-btn" aria-label="Levels">🏠</button>
+      <div id="collect-bar" class="collect-bar" aria-label="Things to collect"></div>
+      <button id="btn-cam" class="icon-btn" aria-label="Camera on or off">📷</button>
+      <button id="btn-hint" class="icon-btn" aria-label="Say the hint again">💬</button>
+      <button class="icon-btn mute-btn" aria-label="Sound on or off">🔊</button>
+    </header>
+
+    <div id="stage" class="stage">
+      <canvas id="scene"></canvas>
+      <div id="big-num" class="big-num" aria-live="polite"></div>
+
+      <div id="cam" class="cam hidden">
+        <video id="cam-video" playsinline muted autoplay></video>
+        <canvas id="cam-overlay"></canvas>
+        <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ring-bg" cx="50" cy="50" r="46"></circle>
+          <circle id="ring-fg" class="ring-fg" cx="50" cy="50" r="46"></circle>
+        </svg>
+        <!-- get-ready overlay: hands down, breathe, then show fingers -->
+        <div class="cam-ready" aria-hidden="true"><span class="hands">🙌</span><span class="down">⬇</span></div>
+        <div id="cam-num" class="cam-num"></div>
+        <button id="btn-flip" class="cam-flip" aria-label="Switch camera">🔄</button>
+        <button id="btn-go" class="go-btn" aria-label="Go">GO</button>
+      </div>
+    </div>
+
+    <nav id="pad" class="pad" aria-label="Hop buttons"></nav>
+
+    <!-- Celebration overlay -->
+    <div id="win" class="win hidden">
+      <canvas id="win-avatar" class="win-fox" aria-hidden="true"></canvas>
+      <div id="win-stars" class="win-stars"></div>
+      <div id="win-unlock" class="win-unlock hidden" aria-label="New outfit unlocked"></div>
+      <div class="win-buttons">
+        <button id="btn-win-home" class="big-round small" aria-label="Levels">🏠</button>
+        <button id="btn-next" class="big-round play" aria-label="Next level">▶</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

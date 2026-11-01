@@ -1,345 +1,186 @@
 {
-  "tileKey": {
-    "G": "tile_grass",
-    "S": "tile_sand",
-    "W": "tile_water",
-    "B": "tile_bridge",
-    "T": "tile_stone",
-    "N": "tile_number",
-    ".": null
-  },
+  "tileKey": {"G": "tile_grass", "S": "tile_sand", "W": "tile_water", "B": "tile_bridge", "T": "tile_stone", "N": "tile_number", ".": null},
+  "worlds": [{"id": 1, "name": "Meadow", "icon": "🌼"}, {"id": 2, "name": "Turns & Water", "icon": "🌊"}, {"id": 3, "name": "Puzzles", "icon": "🎯"}, {"id": 4, "name": "Adventure", "icon": "🏝️"}],
   "levels": [
     {
       "id": 1,
-      "name": "Strawberry Lane",
-      "tiles": [
-        "GGGGGG"
-      ],
-      "path": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          3
-        ],
-        [
-          0,
-          4
-        ],
-        [
-          0,
-          5
-        ]
-      ],
-      "items": [
-        {
-          "type": "strawberry",
-          "index": 2
-        },
-        {
-          "type": "strawberry",
-          "index": 4
-        }
-      ],
-      "goal": {
-        "index": 5,
-        "item": "star"
-      },
+      "name": "First Hops",
+      "world": 1,
+      "tiles": ["GGGG", "...."],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3]],
+      "items": [{"type": "strawberry", "index": 2}],
+      "goal": {"index": 3, "item": "star"},
       "maxHop": 3,
-      "hint": "Show me fingers! How many hops to the star?",
-      "decor": []
+      "hint": "Show me fingers! Hop to the star!",
+      "decor": [{"type": "flower_tulip", "row": 1, "col": 1}]
     },
     {
       "id": 2,
-      "name": "Sandy Corner",
-      "tiles": [
-        "GGGS",
-        "...S",
-        "...S"
-      ],
-      "path": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          3
-        ],
-        [
-          1,
-          3
-        ],
-        [
-          2,
-          3
-        ]
-      ],
-      "items": [
-        {
-          "type": "strawberry",
-          "index": 1
-        },
-        {
-          "type": "strawberry",
-          "index": 3
-        },
-        {
-          "type": "strawberry",
-          "index": 4
-        }
-      ],
-      "goal": {
-        "index": 5,
-        "item": "star"
-      },
-      "maxHop": 5,
-      "hint": "Hop around the corner!",
-      "decor": []
+      "name": "Strawberry Lane",
+      "world": 1,
+      "tiles": ["......", "GGGGGG", "......"],
+      "path": [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]],
+      "items": [{"type": "strawberry", "index": 2}, {"type": "strawberry", "index": 4}],
+      "goal": {"index": 5, "item": "star"},
+      "maxHop": 3,
+      "hint": "How many hops to the strawberry?",
+      "decor": [{"type": "flowers", "row": 2, "col": 1}, {"type": "mushroom", "row": 0, "col": 3}]
     },
     {
       "id": 3,
-      "name": "Little Splash",
-      "tiles": [
-        "GGWGGG"
-      ],
-      "path": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          3
-        ],
-        [
-          0,
-          4
-        ],
-        [
-          0,
-          5
-        ]
-      ],
-      "items": [
-        {
-          "type": "strawberry",
-          "index": 3
-        },
-        {
-          "type": "strawberry",
-          "index": 4
-        }
-      ],
-      "goal": {
-        "index": 5,
-        "item": "star"
-      },
-      "maxHop": 5,
-      "hint": "Jump over the water! Don't land in it!",
-      "decor": []
+      "name": "Little Hops",
+      "world": 1,
+      "tiles": [".......", "GGGGGGG", "......."],
+      "path": [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]],
+      "items": [{"type": "strawberry", "index": 1}, {"type": "gem", "index": 3}, {"type": "strawberry", "index": 5}],
+      "goal": {"index": 6, "item": "star"},
+      "maxHop": 2,
+      "hint": "Little hops! One or two fingers.",
+      "decor": [{"type": "bush", "row": 0, "col": 3}, {"type": "flower_tulip", "row": 2, "col": 5}]
     },
     {
       "id": 4,
-      "name": "Bridge Day",
-      "tiles": [
-        "GGBBGG",
-        ".....S",
-        "..SSSS"
-      ],
-      "path": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          3
-        ],
-        [
-          0,
-          4
-        ],
-        [
-          0,
-          5
-        ],
-        [
-          1,
-          5
-        ],
-        [
-          2,
-          5
-        ],
-        [
-          2,
-          4
-        ],
-        [
-          2,
-          3
-        ],
-        [
-          2,
-          2
-        ]
-      ],
-      "items": [
-        {
-          "type": "strawberry",
-          "index": 4
-        },
-        {
-          "type": "strawberry",
-          "index": 7
-        },
-        {
-          "type": "strawberry",
-          "index": 9
-        }
-      ],
-      "goal": {
-        "index": 10,
-        "item": "star"
-      },
-      "maxHop": 5,
-      "hint": "Cross the wooden bridge!",
-      "decor": []
+      "name": "Sandy Corner",
+      "world": 1,
+      "tiles": ["GGGS", "...S", "...S"],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3]],
+      "items": [{"type": "strawberry", "index": 1}, {"type": "strawberry", "index": 3}, {"type": "heart", "index": 4}],
+      "goal": {"index": 5, "item": "star"},
+      "maxHop": 3,
+      "hint": "Hop around the corner!",
+      "decor": [{"type": "tree", "row": 1, "col": 1}, {"type": "mushroom", "row": 1, "col": 2}]
     },
     {
       "id": 5,
+      "name": "Zig Zag",
+      "world": 2,
+      "tiles": ["GG..", ".SS.", "..GG", "...S"],
+      "path": [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2], [2, 3], [3, 3]],
+      "items": [{"type": "heart", "index": 2}, {"type": "heart", "index": 4}],
+      "goal": {"index": 6, "item": "star_alt"},
+      "maxHop": 3,
+      "hint": "Zig zag! Count your hops.",
+      "decor": [{"type": "flowers", "row": 1, "col": 0}, {"type": "bush", "row": 0, "col": 2}, {"type": "flower_tulip", "row": 2, "col": 1}]
+    },
+    {
+      "id": 6,
+      "name": "Little Splash",
+      "world": 2,
+      "tiles": ["GGWGGG", "......"],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5]],
+      "items": [{"type": "strawberry", "index": 3}, {"type": "gem", "index": 4}],
+      "goal": {"index": 5, "item": "star"},
+      "maxHop": 3,
+      "hint": "Jump over the water! Don't land in it!",
+      "decor": [{"type": "rock", "row": 1, "col": 2}]
+    },
+    {
+      "id": 7,
+      "name": "Rocky Road",
+      "world": 2,
+      "tiles": ["GGGG", "...G", "SSSS"],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [2, 2], [2, 1], [2, 0]],
+      "items": [{"type": "rock", "index": 2}, {"type": "strawberry", "index": 3}, {"type": "strawberry", "index": 6}],
+      "goal": {"index": 8, "item": "star"},
+      "maxHop": 4,
+      "hint": "Hop over the rock!",
+      "decor": [{"type": "bush", "row": 1, "col": 1}, {"type": "mushroom", "row": 1, "col": 2}]
+    },
+    {
+      "id": 8,
+      "name": "Bridge Day",
+      "world": 2,
+      "tiles": ["GGBBGG", ".....S", "..SSSS"],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [1, 5], [2, 5], [2, 4], [2, 3], [2, 2]],
+      "items": [{"type": "strawberry", "index": 4}, {"type": "gem", "index": 7}, {"type": "strawberry", "index": 9}],
+      "goal": {"index": 10, "item": "star_alt"},
+      "maxHop": 5,
+      "hint": "Cross the wooden bridge!",
+      "decor": [{"type": "tree", "row": 1, "col": 1}, {"type": "flower_tulip", "row": 1, "col": 3}]
+    },
+    {
+      "id": 9,
+      "name": "Right on the Star",
+      "world": 3,
+      "tiles": ["GGGGG", "....."],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
+      "items": [],
+      "goal": {"index": 4, "item": "star", "exact": true},
+      "maxHop": 5,
+      "hint": "Land right on the star! Count the tiles.",
+      "decor": [{"type": "flower_tulip", "row": 1, "col": 2}]
+    },
+    {
+      "id": 10,
+      "name": "Stepping Stones",
+      "world": 3,
+      "tiles": ["GWTWTWG"],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6]],
+      "items": [{"type": "gem", "index": 4}],
+      "goal": {"index": 6, "item": "star", "exact": true},
+      "maxHop": 3,
+      "hint": "Hop on the stones! Don't splash!",
+      "decor": []
+    },
+    {
+      "id": 11,
+      "name": "Lily River",
+      "world": 3,
+      "tiles": ["GGWWGW", ".....W", ".....W", ".....G"],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [1, 5], [2, 5], [3, 5]],
+      "items": [{"type": "heart", "index": 4}],
+      "goal": {"index": 8, "item": "star", "exact": true},
+      "maxHop": 5,
+      "hint": "Big jumps over the river!",
+      "decor": [{"type": "tree", "row": 2, "col": 2}, {"type": "mushroom", "row": 1, "col": 3}]
+    },
+    {
+      "id": 12,
+      "name": "Rock Hop",
+      "world": 3,
+      "tiles": ["GGS....", "..SGG..", "....SSG"],
+      "path": [[0, 0], [0, 1], [0, 2], [1, 2], [1, 3], [1, 4], [2, 4], [2, 5], [2, 6]],
+      "items": [{"type": "strawberry", "index": 2}, {"type": "rock", "index": 3}, {"type": "strawberry", "index": 5}, {"type": "rock", "index": 6}, {"type": "gem", "index": 7}],
+      "goal": {"index": 8, "item": "star", "exact": true},
+      "maxHop": 4,
+      "hint": "Hop over the rocks and land on the star!",
+      "decor": [{"type": "flowers", "row": 1, "col": 0}]
+    },
+    {
+      "id": 13,
+      "name": "Long Way Round",
+      "world": 4,
+      "tiles": ["GGGGG", "....W", ".GG.S", ".WSSS"],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 4], [2, 4], [3, 4], [3, 3], [3, 2], [3, 1], [2, 1], [2, 2]],
+      "items": [{"type": "rock", "index": 1}, {"type": "strawberry", "index": 3}, {"type": "heart", "index": 7}, {"type": "strawberry", "index": 9}],
+      "goal": {"index": 12, "item": "star"},
+      "maxHop": 5,
+      "hint": "A long, long path! Keep hopping!",
+      "decor": [{"type": "tree", "row": 1, "col": 2}, {"type": "flower_tulip", "row": 1, "col": 1}]
+    },
+    {
+      "id": 14,
+      "name": "Number Plates",
+      "world": 4,
+      "tiles": [".........", "GNWNWWNWG", "........."],
+      "path": [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6], [1, 7], [1, 8]],
+      "items": [{"type": "gem", "index": 3}],
+      "goal": {"index": 8, "item": "star_alt", "exact": true},
+      "maxHop": 4,
+      "hint": "Hop on the number plates!",
+      "decor": [{"type": "flowers", "row": 2, "col": 0}, {"type": "bush", "row": 0, "col": 8}, {"type": "mushroom", "row": 2, "col": 5}]
+    },
+    {
+      "id": 15,
       "name": "Treasure Island",
-      "tiles": [
-        "GGWWGG",
-        ".....S",
-        "SNWSSS"
-      ],
-      "path": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          3
-        ],
-        [
-          0,
-          4
-        ],
-        [
-          0,
-          5
-        ],
-        [
-          1,
-          5
-        ],
-        [
-          2,
-          5
-        ],
-        [
-          2,
-          4
-        ],
-        [
-          2,
-          3
-        ],
-        [
-          2,
-          2
-        ],
-        [
-          2,
-          1
-        ],
-        [
-          2,
-          0
-        ]
-      ],
-      "items": [
-        {
-          "type": "strawberry",
-          "index": 4
-        },
-        {
-          "type": "strawberry",
-          "index": 8
-        },
-        {
-          "type": "strawberry",
-          "index": 11
-        }
-      ],
-      "goal": {
-        "index": 12,
-        "item": "chest"
-      },
+      "world": 4,
+      "tiles": ["GGWWGG", ".....S", "SNWSSS"],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [1, 5], [2, 5], [2, 4], [2, 3], [2, 2], [2, 1], [2, 0]],
+      "items": [{"type": "strawberry", "index": 4}, {"type": "gem", "index": 8}, {"type": "heart", "index": 11}],
+      "goal": {"index": 12, "item": "chest", "exact": true},
       "maxHop": 5,
       "hint": "Find the treasure chest!",
-      "decor": [
-        {
-          "type": "tree",
-          "row": 1,
-          "col": 0
-        },
-        {
-          "type": "flowers",
-          "row": 1,
-          "col": 2
-        },
-        {
-          "type": "bush",
-          "row": 1,
-          "col": 3
-        }
-      ]
+      "decor": [{"type": "tree", "row": 1, "col": 0}, {"type": "flowers", "row": 1, "col": 2}, {"type": "bush", "row": 1, "col": 3}, {"type": "rock", "row": 1, "col": 4}]
     }
   ]
 }
